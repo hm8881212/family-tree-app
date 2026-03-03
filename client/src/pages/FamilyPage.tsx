@@ -76,6 +76,10 @@ export default function FamilyPage() {
       })
     : persons;
 
+  const highlightIds = search.trim()
+    ? new Set(filteredPersons.map((p) => p.id))
+    : undefined;
+
   if (loading) return <AppLayout><div className="text-center py-12 text-gray-400">Loading...</div></AppLayout>;
   if (!family) return <AppLayout><div className="text-center py-12 text-red-500">Family not found.</div></AppLayout>;
 
@@ -147,6 +151,7 @@ export default function FamilyPage() {
               ref={treeRef}
               persons={persons}
               relationships={relationships}
+              highlightIds={highlightIds}
               onPersonClick={(p) => navigate(`/families/${id}/persons/${p.id}`)}
             />
           )}

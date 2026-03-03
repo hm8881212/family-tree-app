@@ -27,6 +27,7 @@ interface Props {
   persons: TreePerson[];
   relationships: TreeRelationship[];
   onPersonClick?: (person: TreePerson) => void;
+  highlightIds?: Set<string>;
 }
 
 interface NodePos {
@@ -98,7 +99,7 @@ const GENDER_COLORS: Record<string, string> = {
 };
 
 const FamilyTree = forwardRef<FamilyTreeHandle, Props>(function FamilyTree(
-  { persons, relationships, onPersonClick },
+  { persons, relationships, onPersonClick, highlightIds },
   ref
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -108,6 +109,9 @@ const FamilyTree = forwardRef<FamilyTreeHandle, Props>(function FamilyTree(
   const dragStartRef = useRef({ x: 0, y: 0 });
   const nodesRef = useRef<NodePos[]>([]);
   const lastTouchDistRef = useRef<number | null>(null);
+
+  const highlightIdsRef = useRef<Set<string>>(new Set());
+  highlightIdsRef.current = highlightIds ?? new Set();
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -159,9 +163,10 @@ const FamilyTree = forwardRef<FamilyTreeHandle, Props>(function FamilyTree(
       ctx.shadowBlur = 8;
       ctx.shadowOffsetY = 2;
 
+      const isHighlighted = highlightIdsRef.current.size > 0 && highlightIdsRef.current.has(person.id);
       ctx.beginPath();
       ctx.roundRect(x, y, NODE_W, NODE_H, 10);
-      ctx.fillStyle = person.is_unknown ? '#F3F4F6' : '#FFFFFF';
+      ctx.fillStyle = isHighlighted ? '#FEF08A' : person.is_unknown ? '#F3F4F6' : '#FFFFFF';
       ctx.fill();
 
       ctx.shadowColor = 'transparent';
@@ -175,8 +180,8 @@ const FamilyTree = forwardRef<FamilyTreeHandle, Props>(function FamilyTree(
 
       ctx.beginPath();
       ctx.roundRect(x, y, NODE_W, NODE_H, 10);
-      ctx.strokeStyle = '#E5E7EB';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = isHighlighted ? '#EAB308' : '#E5E7EB';
+      ctx.lineWidth = isHighlighted ? 2 : 1;
       ctx.stroke();
 
       ctx.fillStyle = person.is_unknown ? '#9CA3AF' : '#1F2937';
@@ -211,6 +216,11 @@ const FamilyTree = forwardRef<FamilyTreeHandle, Props>(function FamilyTree(
     nodesRef.current = layoutNodes(persons, relationships);
     draw();
   }, [persons, relationships, draw]);
+
+  // Redraw when highlight set changes (search)
+  useEffect(() => {
+    draw();
+  }, [highlightIds, draw]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

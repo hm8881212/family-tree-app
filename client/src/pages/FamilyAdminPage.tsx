@@ -25,6 +25,7 @@ interface UnknownPerson {
   first_name: string;
   last_name: string;
   dob?: string;
+  is_unknown?: boolean;
   claimed_by_user_id?: string;
 }
 
