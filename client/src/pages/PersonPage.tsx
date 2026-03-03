@@ -110,24 +110,24 @@ export default function PersonPage() {
       </div>
 
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 flex items-start gap-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
         {/* Avatar */}
-        <div className="w-20 h-20 rounded-full bg-brand-100 flex items-center justify-center text-2xl font-bold text-brand-700 flex-shrink-0">
+        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-brand-100 flex items-center justify-center text-xl sm:text-2xl font-bold text-brand-700 flex-shrink-0">
           {person.photo_url
             ? <img src={person.photo_url} alt="" className="w-full h-full rounded-full object-cover" />
             : person.is_unknown ? '?' : `${person.first_name[0]}${person.last_name[0]}`}
         </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-800">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 truncate">
             {person.is_unknown ? 'Unknown Person' : `${person.first_name} ${person.last_name}`}
           </h1>
           {person.gender && <p className="text-sm text-gray-500 capitalize mt-1">{person.gender}</p>}
-          <div className="flex gap-4 mt-1 text-sm text-gray-400">
+          <div className="flex flex-wrap gap-3 mt-1 text-sm text-gray-400">
             {person.dob && <span>b. {new Date(person.dob).toLocaleDateString()}</span>}
             {person.dod && <span>d. {new Date(person.dod).toLocaleDateString()}</span>}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 self-start">
           <button onClick={() => setEditing(!editing)}
             className="px-3 py-1.5 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50">
             {editing ? 'Cancel' : 'Edit'}
@@ -141,9 +141,9 @@ export default function PersonPage() {
 
       {/* Edit form */}
       {editing && (
-        <div className="bg-white rounded-xl border border-brand-200 p-6 mb-6">
+        <div className="bg-white rounded-xl border border-brand-200 p-4 sm:p-6 mb-6">
           <h3 className="font-semibold text-gray-800 mb-4">Edit Person (goes to admin for approval)</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">First Name</label>
               <input value={editForm.first_name ?? ''} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
@@ -201,7 +201,7 @@ export default function PersonPage() {
 
       {tab === 'info' && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <dl className="grid grid-cols-2 gap-4 text-sm">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div><dt className="text-gray-400">Full name</dt><dd className="font-medium text-gray-800 mt-0.5">{person.first_name} {person.last_name}</dd></div>
             <div><dt className="text-gray-400">Gender</dt><dd className="font-medium text-gray-800 mt-0.5 capitalize">{person.gender ?? '—'}</dd></div>
             <div><dt className="text-gray-400">Date of birth</dt><dd className="font-medium text-gray-800 mt-0.5">{person.dob ? new Date(person.dob).toLocaleDateString() : '—'}</dd></div>

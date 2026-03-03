@@ -1,9 +1,9 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import PersonForm from '../components/PersonForm';
-import FamilyTree, { TreePerson, TreeRelationship } from '../components/Tree/FamilyTree';
+import FamilyTree, { TreePerson, TreeRelationship, FamilyTreeHandle } from '../components/Tree/FamilyTree';
 import AddRelationshipForm from '../components/AddRelationshipForm';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
@@ -40,6 +40,8 @@ export default function FamilyPage() {
   const [showRelForm, setShowRelForm] = useState(false);
   const [relMode, setRelMode] = useState<'indian' | 'international'>('international');
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const treeRef = useRef<FamilyTreeHandle>(null);
 
   const loadData = async () => {
     if (!id) return;
@@ -63,43 +65,58 @@ export default function FamilyPage() {
 
   const isAdmin = membership?.role === 'admin' || user?.role === 'superadmin';
 
+  const filteredPersons = search.trim()
+    ? persons.filter((p) => {
+        const q = search.toLowerCase();
+        return (
+          p.first_name.toLowerCase().includes(q) ||
+          p.last_name.toLowerCase().includes(q) ||
+          `${p.first_name} ${p.last_name}`.toLowerCase().includes(q)
+        );
+      })
+    : persons;
+
   if (loading) return <AppLayout><div className="text-center py-12 text-gray-400">Loading...</div></AppLayout>;
   if (!family) return <AppLayout><div className="text-center py-12 text-red-500">Family not found.</div></AppLayout>;
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-between mb-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">{family.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{family.name}</h1>
           <p className="text-gray-400 text-sm">/{family.slug}</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           {isAdmin && (
             <Link to={`/families/${id}/admin`}
-              className="px-4 py-2 border border-brand-600 text-brand-600 rounded-lg text-sm font-medium hover:bg-brand-50 transition-colors">
+              className="px-3 sm:px-4 py-2 border border-brand-600 text-brand-600 rounded-lg text-sm font-medium hover:bg-brand-50 transition-colors">
               Admin Panel
             </Link>
           )}
           <button onClick={() => setShowForm((s) => !s)}
-            className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
+            className="px-3 sm:px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
             {showForm ? 'Cancel' : '+ Add Person'}
           </button>
         </div>
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Propose New Person</h2>
-          <PersonForm familyId={id!} onSuccess={() => { setShowForm(false); loadData(); }} />
+          <PersonForm
+            familyId={id!}
+            existingPersons={persons}
+            onSuccess={() => { setShowForm(false); loadData(); }}
+          />
         </div>
       )}
 
       {/* Tree visualization */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 sm:mb-8 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-800">Family Tree</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Relationship names:</span>
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setRelMode(relMode === 'indian' ? 'international' : 'indian')}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
@@ -108,9 +125,17 @@ export default function FamilyPage() {
             >
               {relMode === 'indian' ? '🇮🇳 Indian' : '🌍 International'}
             </button>
+            {persons.length > 0 && (
+              <button
+                onClick={() => treeRef.current?.exportPng()}
+                className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                Export PNG
+              </button>
+            )}
           </div>
         </div>
-        <div style={{ height: '400px', position: 'relative' }}>
+        <div style={{ height: 'clamp(260px, 40vw, 400px)', position: 'relative' }}>
           {persons.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <div className="text-5xl mb-3">🌳</div>
@@ -119,6 +144,7 @@ export default function FamilyPage() {
             </div>
           ) : (
             <FamilyTree
+              ref={treeRef}
               persons={persons}
               relationships={relationships}
               onPersonClick={(p) => navigate(`/families/${id}/persons/${p.id}`)}
@@ -129,7 +155,7 @@ export default function FamilyPage() {
 
       {/* Selected person details + actions */}
       {selectedPerson && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-800">
               {selectedPerson.is_unknown ? 'Unknown Person' : `${selectedPerson.first_name} ${selectedPerson.last_name}`}
@@ -158,26 +184,43 @@ export default function FamilyPage() {
         </div>
       )}
 
-      {/* Person list */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">People ({persons.length})</h2>
+      {/* Person list with search */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">People ({persons.length})</h2>
+          {persons.length > 0 && (
+            <input
+              type="search"
+              placeholder="Search by name…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full sm:w-56 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          )}
+        </div>
         {persons.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">No people added yet.</p>
+        ) : filteredPersons.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">No people match "{search}".</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {persons.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg">
-                <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-semibold text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {filteredPersons.map((p) => (
+              <Link
+                key={p.id}
+                to={`/families/${id}/persons/${p.id}`}
+                className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-semibold text-sm flex-shrink-0">
                   {p.is_unknown ? '?' : `${p.first_name[0]}${p.last_name[0]}`}
                 </div>
-                <div>
-                  <p className="font-medium text-sm text-gray-800">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm text-gray-800 truncate">
                     {p.first_name} {p.last_name}
                     {p.is_unknown && <span className="ml-1 text-xs text-gray-400">(unknown)</span>}
                   </p>
                   {p.gender && <p className="text-xs text-gray-400 capitalize">{p.gender}</p>}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

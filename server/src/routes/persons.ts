@@ -198,6 +198,66 @@ router.delete('/:personId',
   }
 );
 
+// POST /api/families/:id/persons/:personId/claim-user  (admin only)
+// Link an unknown person node to a registered family member
+router.post('/:personId/claim-user',
+  authenticateToken,
+  requireVerified,
+  requireAdmin(),
+  [body('user_id').isUUID()],
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) { sendValidationError(res, errors.array()); return; }
+
+    const { personId, id: familyId } = req.params;
+    const { user_id } = req.body;
+    const actorId = req.user!.id;
+
+    const person = await queryOne<Person>('SELECT * FROM persons WHERE id = $1 AND deleted_at IS NULL', [personId]);
+    if (!person) { sendError(res, 404, 'Person not found'); return; }
+
+    // Verify the target user is an active family member
+    const member = await queryOne<FamilyMember>(
+      "SELECT * FROM family_members WHERE family_id = $1 AND user_id = $2 AND status = 'active'",
+      [familyId, user_id]
+    );
+    if (!member) { sendError(res, 400, 'Target user is not an active member of this family'); return; }
+
+    const [updated] = await query<Person>(
+      'UPDATE persons SET claimed_by_user_id = $1, is_unknown = false WHERE id = $2 RETURNING *',
+      [user_id, personId]
+    );
+
+    await writeAuditLog({
+      entityType: 'person',
+      entityId: personId,
+      action: 'claim_person',
+      actorId,
+      newValue: { claimed_by_user_id: user_id },
+    });
+
+    res.json({ person: updated, message: 'Person linked to user.' });
+  }
+);
+
+// GET /api/families/:id/persons/members-list (admin only — for claim UI)
+router.get('/members-list',
+  authenticateToken,
+  requireVerified,
+  requireAdmin(),
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const { id: familyId } = req.params;
+    const members = await query<{ id: string; email: string; role: string }>(
+      `SELECT u.id, u.email, fm.role
+       FROM family_members fm JOIN users u ON u.id = fm.user_id
+       WHERE fm.family_id = $1 AND fm.status = 'active'
+       ORDER BY u.email`,
+      [familyId]
+    );
+    res.json({ members });
+  }
+);
+
 // GET /api/persons/:id/history
 router.get('/:personId/history',
   authenticateToken,

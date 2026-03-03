@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 
 export interface TreePerson {
   id: string;
@@ -17,6 +17,10 @@ export interface TreeRelationship {
   to_person_id: string;
   type: string;
   subtype?: string;
+}
+
+export interface FamilyTreeHandle {
+  exportPng: () => void;
 }
 
 interface Props {
@@ -39,9 +43,8 @@ const V_GAP = 120;
 function layoutNodes(persons: TreePerson[], relationships: TreeRelationship[]): NodePos[] {
   if (persons.length === 0) return [];
 
-  // Simple generation-based layout using parent_of relationships
   const genMap = new Map<string, number>();
-  const childOf = new Map<string, string[]>(); // parentId -> childIds
+  const childOf = new Map<string, string[]>();
 
   for (const r of relationships) {
     if (r.type === 'parent_of') {
@@ -50,7 +53,6 @@ function layoutNodes(persons: TreePerson[], relationships: TreeRelationship[]): 
     }
   }
 
-  // BFS to assign generations
   const roots = persons.filter((p) => !relationships.some((r) => r.type === 'parent_of' && r.to_person_id === p.id));
   const queue = roots.map((r) => ({ id: r.id, gen: 0 }));
   while (queue.length > 0) {
@@ -61,12 +63,10 @@ function layoutNodes(persons: TreePerson[], relationships: TreeRelationship[]): 
       queue.push({ id: childId, gen: gen + 1 });
     }
   }
-  // Assign unvisited persons to gen 0
   for (const p of persons) {
     if (!genMap.has(p.id)) genMap.set(p.id, 0);
   }
 
-  // Group by generation
   const byGen = new Map<number, TreePerson[]>();
   for (const p of persons) {
     const g = genMap.get(p.id) ?? 0;
@@ -97,13 +97,17 @@ const GENDER_COLORS: Record<string, string> = {
   unknown: '#9CA3AF',
 };
 
-export default function FamilyTree({ persons, relationships, onPersonClick }: Props) {
+const FamilyTree = forwardRef<FamilyTreeHandle, Props>(function FamilyTree(
+  { persons, relationships, onPersonClick },
+  ref
+) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offsetRef = useRef({ x: 0, y: 0 });
   const scaleRef = useRef(1);
   const draggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const nodesRef = useRef<NodePos[]>([]);
+  const lastTouchDistRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -124,7 +128,6 @@ export default function FamilyTree({ persons, relationships, onPersonClick }: Pr
     const nodes = nodesRef.current;
     const posById = new Map(nodes.map((n) => [n.person.id, n]));
 
-    // Draw relationship lines
     for (const r of relationships) {
       const from = posById.get(r.from_person_id);
       const to = posById.get(r.to_person_id);
@@ -138,7 +141,6 @@ export default function FamilyTree({ persons, relationships, onPersonClick }: Pr
       const fy = from.y + NODE_H / 2;
       const tx = to.x + NODE_W / 2;
       const ty = to.y + NODE_H / 2;
-      // Curved line for parent_of
       if (r.type === 'parent_of') {
         ctx.moveTo(fx, fy + NODE_H / 2);
         ctx.bezierCurveTo(fx, (fy + ty) / 2, tx, (fy + ty) / 2, tx, ty - NODE_H / 2);
@@ -150,16 +152,13 @@ export default function FamilyTree({ persons, relationships, onPersonClick }: Pr
       ctx.setLineDash([]);
     }
 
-    // Draw nodes
     for (const { x, y, person } of nodes) {
       const color = GENDER_COLORS[person.gender ?? 'unknown'] ?? GENDER_COLORS.unknown;
 
-      // Card shadow
       ctx.shadowColor = 'rgba(0,0,0,0.08)';
       ctx.shadowBlur = 8;
       ctx.shadowOffsetY = 2;
 
-      // Card background
       ctx.beginPath();
       ctx.roundRect(x, y, NODE_W, NODE_H, 10);
       ctx.fillStyle = person.is_unknown ? '#F3F4F6' : '#FFFFFF';
@@ -169,27 +168,23 @@ export default function FamilyTree({ persons, relationships, onPersonClick }: Pr
       ctx.shadowBlur = 0;
       ctx.shadowOffsetY = 0;
 
-      // Color bar on left
       ctx.beginPath();
       ctx.roundRect(x, y, 5, NODE_H, [10, 0, 0, 10]);
       ctx.fillStyle = person.is_unknown ? '#D1D5DB' : color;
       ctx.fill();
 
-      // Border
       ctx.beginPath();
       ctx.roundRect(x, y, NODE_W, NODE_H, 10);
       ctx.strokeStyle = '#E5E7EB';
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Name
       ctx.fillStyle = person.is_unknown ? '#9CA3AF' : '#1F2937';
       ctx.font = `${person.is_unknown ? 'italic ' : ''}600 12px Inter, sans-serif`;
       ctx.textAlign = 'left';
       const name = person.is_unknown ? 'Unknown' : `${person.first_name} ${person.last_name}`;
       ctx.fillText(name.length > 14 ? name.slice(0, 13) + '…' : name, x + 14, y + 26);
 
-      // DOB
       if (person.dob) {
         ctx.fillStyle = '#9CA3AF';
         ctx.font = '400 10px Inter, sans-serif';
@@ -201,12 +196,22 @@ export default function FamilyTree({ persons, relationships, onPersonClick }: Pr
     ctx.restore();
   }, [relationships]);
 
+  useImperativeHandle(ref, () => ({
+    exportPng: () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const link = document.createElement('a');
+      link.download = 'family-tree.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    },
+  }));
+
   useEffect(() => {
     nodesRef.current = layoutNodes(persons, relationships);
     draw();
   }, [persons, relationships, draw]);
 
-  // Resize observer
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -225,7 +230,6 @@ export default function FamilyTree({ persons, relationships, onPersonClick }: Pr
     return () => ro.disconnect();
   }, [draw]);
 
-  // Pan on drag
   const onMouseDown = (e: React.MouseEvent) => {
     draggingRef.current = true;
     dragStartRef.current = { x: e.clientX - offsetRef.current.x, y: e.clientY - offsetRef.current.y };
@@ -237,22 +241,20 @@ export default function FamilyTree({ persons, relationships, onPersonClick }: Pr
   };
   const onMouseUp = () => { draggingRef.current = false; };
 
-  // Zoom on scroll
   const onWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     scaleRef.current = Math.max(0.3, Math.min(3, scaleRef.current * (e.deltaY > 0 ? 0.9 : 1.1)));
     draw();
   };
 
-  // Click to select person
   const onClick = (e: React.MouseEvent) => {
     if (!onPersonClick) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = window.devicePixelRatio ?? 1;
     const rect = canvas.getBoundingClientRect();
-    const mx = (e.clientX - rect.left);
-    const my = (e.clientY - rect.top);
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
     const cx = canvas.width / dpr / 2 + offsetRef.current.x;
     const cy = (canvas.height / dpr) * 0.3 + offsetRef.current.y;
     const wx = (mx - cx) / scaleRef.current;
@@ -266,16 +268,62 @@ export default function FamilyTree({ persons, relationships, onPersonClick }: Pr
     }
   };
 
+  // Touch support
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      draggingRef.current = true;
+      dragStartRef.current = {
+        x: e.touches[0].clientX - offsetRef.current.x,
+        y: e.touches[0].clientY - offsetRef.current.y,
+      };
+      lastTouchDistRef.current = null;
+    } else if (e.touches.length === 2) {
+      draggingRef.current = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastTouchDistRef.current = Math.sqrt(dx * dx + dy * dy);
+    }
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && draggingRef.current) {
+      offsetRef.current = {
+        x: e.touches[0].clientX - dragStartRef.current.x,
+        y: e.touches[0].clientY - dragStartRef.current.y,
+      };
+      draw();
+    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const ratio = dist / lastTouchDistRef.current;
+      scaleRef.current = Math.max(0.3, Math.min(3, scaleRef.current * ratio));
+      lastTouchDistRef.current = dist;
+      draw();
+    }
+  };
+
+  const onTouchEnd = () => {
+    draggingRef.current = false;
+    lastTouchDistRef.current = null;
+  };
+
   return (
     <canvas
       ref={canvasRef}
-      style={{ cursor: 'grab', display: 'block', width: '100%', height: '100%' }}
+      style={{ cursor: 'grab', display: 'block', width: '100%', height: '100%', touchAction: 'none' }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
       onMouseLeave={onMouseUp}
       onWheel={onWheel}
       onClick={onClick}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     />
   );
-}
+});
+
+export default FamilyTree;
