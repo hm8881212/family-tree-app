@@ -12,6 +12,7 @@ import proposalsRouter from './routes/proposals';
 import relationshipsRouter from './routes/relationships';
 import notificationsRouter from './routes/notifications';
 import superadminRouter from './routes/superadmin';
+import uploadsRouter from './routes/uploads';
 import { generalRateLimiter } from './middleware/rateLimiter';
 import { sendError } from './utils/helpers';
 
@@ -37,6 +38,7 @@ app.use('/api/proposals', proposalsRouter);
 app.use('/api', relationshipsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/superadmin', superadminRouter);
+app.use('/api/uploads', uploadsRouter);
 app.use('/api/families', superadminRouter); // for merge-request endpoint
 
 // Invite validation (standalone)

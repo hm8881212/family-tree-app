@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import AddRelationshipForm from '../components/AddRelationshipForm';
+import PhotoUpload from '../components/PhotoUpload';
 import api from '../utils/api';
 
 interface Person {
@@ -173,6 +174,11 @@ export default function PersonPage() {
               <input type="date" value={editForm.dod?.split('T')[0] ?? ''} onChange={(e) => setEditForm({ ...editForm, dod: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
+          </div>
+          <div className="mt-4">
+            <label className="block text-xs font-medium text-gray-600 mb-2">Photo</label>
+            <PhotoUpload personId={person.id} currentPhotoUrl={person.photo_url}
+              onSuccess={(url) => { setPerson({ ...person, photo_url: url }); }} />
           </div>
           <div className="mt-4 flex gap-3">
             <button onClick={handleSave} disabled={saving}
