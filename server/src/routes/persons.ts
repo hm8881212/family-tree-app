@@ -107,4 +107,112 @@ router.get('/proposals',
   }
 );
 
+// GET /api/persons/:id
+router.get('/:personId',
+  authenticateToken,
+  requireVerified,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const { personId } = req.params;
+    const person = await queryOne<Person>('SELECT * FROM persons WHERE id = $1 AND deleted_at IS NULL', [personId]);
+    if (!person) { sendError(res, 404, 'Person not found'); return; }
+    res.json({ person });
+  }
+);
+
+// PUT /api/persons/:id (propose edit)
+router.put('/:personId',
+  authenticateToken,
+  requireVerified,
+  [
+    body('first_name').optional().trim().isLength({ min: 1, max: 100 }),
+    body('last_name').optional().trim().isLength({ min: 1, max: 100 }),
+    body('gender').optional().isIn(['male', 'female', 'other', 'unknown', '']),
+    body('dob').optional({ nullable: true }).isISO8601().toDate(),
+    body('dod').optional({ nullable: true }).isISO8601().toDate(),
+  ],
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) { sendValidationError(res, errors.array()); return; }
+
+    const { personId } = req.params;
+    const userId = req.user!.id;
+
+    const person = await queryOne<Person>('SELECT * FROM persons WHERE id = $1 AND deleted_at IS NULL', [personId]);
+    if (!person) { sendError(res, 404, 'Person not found'); return; }
+
+    // Find their family to verify membership
+    const pfRow = await queryOne<{ family_id: string }>(
+      'SELECT family_id FROM person_families WHERE person_id = $1 LIMIT 1', [personId]
+    );
+    if (pfRow) {
+      const member = await queryOne<FamilyMember>(
+        "SELECT * FROM family_members WHERE family_id = $1 AND user_id = $2 AND status = 'active'",
+        [pfRow.family_id, userId]
+      );
+      if (!member && req.user!.role !== 'superadmin') {
+        sendError(res, 403, 'Must be a family member to propose edits'); return;
+      }
+    }
+
+    const changes: Record<string, unknown> = {};
+    ['first_name', 'last_name', 'gender', 'dob', 'dod'].forEach((k) => {
+      if (req.body[k] !== undefined) changes[k] = req.body[k] || null;
+    });
+
+    const payload = { type: 'edit_person' as const, person_id: personId, changes };
+    const [proposal] = await query<EditProposal>(
+      `INSERT INTO edit_proposals (family_id, proposed_by, action, payload)
+       VALUES ($1, $2, 'edit_person', $3) RETURNING *`,
+      [pfRow?.family_id ?? null, userId, JSON.stringify(payload)]
+    );
+
+    await writeAuditLog({ entityType: 'edit_proposal', entityId: proposal.id, action: 'propose_edit', actorId: userId, newValue: payload });
+    res.status(201).json({ proposal, message: 'Edit proposal submitted for admin review.' });
+  }
+);
+
+// DELETE /api/persons/:id (propose soft delete)
+router.delete('/:personId',
+  authenticateToken,
+  requireVerified,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const { personId } = req.params;
+    const userId = req.user!.id;
+
+    const person = await queryOne<Person>('SELECT * FROM persons WHERE id = $1 AND deleted_at IS NULL', [personId]);
+    if (!person) { sendError(res, 404, 'Person not found'); return; }
+
+    const pfRow = await queryOne<{ family_id: string }>(
+      'SELECT family_id FROM person_families WHERE person_id = $1 LIMIT 1', [personId]
+    );
+
+    const payload = { type: 'delete_person' as const, person_id: personId };
+    const [proposal] = await query<EditProposal>(
+      `INSERT INTO edit_proposals (family_id, proposed_by, action, payload)
+       VALUES ($1, $2, 'delete_person', $3) RETURNING *`,
+      [pfRow?.family_id ?? null, userId, JSON.stringify(payload)]
+    );
+
+    await writeAuditLog({ entityType: 'edit_proposal', entityId: proposal.id, action: 'propose_delete', actorId: userId, newValue: payload });
+    res.status(201).json({ proposal, message: 'Deletion proposal submitted for admin review.' });
+  }
+);
+
+// GET /api/persons/:id/history
+router.get('/:personId/history',
+  authenticateToken,
+  requireVerified,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const { personId } = req.params;
+    const history = await query(
+      `SELECT ph.*, u.email AS actor_email
+       FROM person_history ph LEFT JOIN users u ON u.id = ph.changed_by
+       WHERE ph.person_id = $1
+       ORDER BY ph.changed_at DESC`,
+      [personId]
+    );
+    res.json({ history });
+  }
+);
+
 export default router;

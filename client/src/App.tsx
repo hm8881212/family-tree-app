@@ -10,6 +10,7 @@ import NewFamilyPage from './pages/NewFamilyPage';
 import FamilyPage from './pages/FamilyPage';
 import FamilyAdminPage from './pages/FamilyAdminPage';
 import SuperAdminPage from './pages/SuperAdminPage';
+import PersonPage from './pages/PersonPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/families/:id" element={<FamilyPage />} />
             <Route path="/families/:id/admin" element={<FamilyAdminPage />} />
             <Route path="/superadmin" element={<SuperAdminPage />} />
+            <Route path="/families/:familyId/persons/:personId" element={<PersonPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

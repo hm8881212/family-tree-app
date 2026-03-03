@@ -32,6 +32,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/families', familiesRouter);
 app.use('/api/families/:id/persons', personsRouter);
 app.use('/api/families/:id', personsRouter); // for /proposals sub-route
+app.use('/api/persons', personsRouter);      // standalone /api/persons/:id routes
 app.use('/api/proposals', proposalsRouter);
 app.use('/api', relationshipsRouter);
 app.use('/api/notifications', notificationsRouter);

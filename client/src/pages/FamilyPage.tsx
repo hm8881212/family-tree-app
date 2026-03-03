@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import PersonForm from '../components/PersonForm';
 import FamilyTree, { TreePerson, TreeRelationship } from '../components/Tree/FamilyTree';
@@ -29,6 +30,7 @@ interface FamilyMember {
 export default function FamilyPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [family, setFamily] = useState<Family | null>(null);
   const [persons, setPersons] = useState<Person[]>([]);
   const [membership, setMembership] = useState<FamilyMember | null>(null);
@@ -119,7 +121,7 @@ export default function FamilyPage() {
             <FamilyTree
               persons={persons}
               relationships={relationships}
-              onPersonClick={setSelectedPerson}
+              onPersonClick={(p) => navigate(`/families/${id}/persons/${p.id}`)}
             />
           )}
         </div>
