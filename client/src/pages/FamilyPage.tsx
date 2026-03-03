@@ -2,6 +2,7 @@
 import { useParams, Link } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import PersonForm from '../components/PersonForm';
+import FamilyTree, { TreePerson, TreeRelationship } from '../components/Tree/FamilyTree';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -30,18 +31,22 @@ export default function FamilyPage() {
   const [family, setFamily] = useState<Family | null>(null);
   const [persons, setPersons] = useState<Person[]>([]);
   const [membership, setMembership] = useState<FamilyMember | null>(null);
+  const [relationships, setRelationships] = useState<TreeRelationship[]>([]);
+  const [selectedPerson, setSelectedPerson] = useState<TreePerson | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [relMode, setRelMode] = useState<'indian' | 'international'>('international');
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     if (!id) return;
     try {
-      const [famRes, personsRes] = await Promise.all([
+      const [famRes, treeRes] = await Promise.all([
         api.get(`/families/${id}`),
-        api.get(`/families/${id}/persons`),
+        api.get(`/families/${id}/tree`),
       ]);
       setFamily(famRes.data.family);
-      setPersons(personsRes.data.persons ?? []);
+      setPersons(treeRes.data.persons ?? []);
+      setRelationships(treeRes.data.relationships ?? []);
       setMembership(famRes.data.membership ?? null);
     } catch {
       // ignore
@@ -85,12 +90,52 @@ export default function FamilyPage() {
         </div>
       )}
 
-      {/* Tree placeholder */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8 text-center text-gray-400">
-        <div className="text-5xl mb-4">🌳</div>
-        <p className="font-medium">Interactive Tree View</p>
-        <p className="text-sm mt-1">Coming in Phase 2 — Canvas-based tree visualization</p>
+      {/* Tree visualization */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-800">Family Tree</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Relationship names:</span>
+            <button
+              onClick={() => setRelMode(relMode === 'indian' ? 'international' : 'indian')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                relMode === 'indian' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
+              }`}
+            >
+              {relMode === 'indian' ? '🇮🇳 Indian' : '🌍 International'}
+            </button>
+          </div>
+        </div>
+        <div style={{ height: '400px', position: 'relative' }}>
+          {persons.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <div className="text-5xl mb-3">🌳</div>
+              <p className="font-medium">No people yet</p>
+              <p className="text-sm mt-1">Add the first person to start your family tree</p>
+            </div>
+          ) : (
+            <FamilyTree
+              persons={persons}
+              relationships={relationships}
+              onPersonClick={setSelectedPerson}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Selected person details */}
+      {selectedPerson && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-gray-800">
+              {selectedPerson.is_unknown ? 'Unknown Person' : `${selectedPerson.first_name} ${selectedPerson.last_name}`}
+            </h3>
+            <button onClick={() => setSelectedPerson(null)} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+          </div>
+          {selectedPerson.dob && <p className="text-sm text-gray-500">Born: {new Date(selectedPerson.dob).toLocaleDateString()}</p>}
+          {selectedPerson.dod && <p className="text-sm text-gray-500">Died: {new Date(selectedPerson.dod).toLocaleDateString()}</p>}
+        </div>
+      )}
 
       {/* Person list */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

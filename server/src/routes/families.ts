@@ -206,4 +206,24 @@ router.post('/:id/reject-join/:userId',
   }
 );
 
+// GET /api/families/:id
+router.get('/:id',
+  authenticateToken,
+  requireVerified,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const { id: familyId } = req.params;
+    const userId = req.user!.id;
+
+    const family = await queryOne<Family>('SELECT id, name, slug, created_at FROM families WHERE id = $1 AND deleted_at IS NULL', [familyId]);
+    if (!family) { sendError(res, 404, 'Family not found'); return; }
+
+    const membership = await queryOne<FamilyMember>(
+      "SELECT * FROM family_members WHERE family_id = $1 AND user_id = $2 AND status = 'active'",
+      [familyId, userId]
+    );
+
+    res.json({ family, membership: membership ? { role: membership.role } : null });
+  }
+);
+
 export default router;
