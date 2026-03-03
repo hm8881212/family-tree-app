@@ -5,6 +5,7 @@ import { sendError, sendValidationError } from '../utils/helpers';
 import { authenticateToken, requireVerified, requireAdmin, AuthRequest } from '../middleware/auth';
 import { writeAuditLog } from '../middleware/audit';
 import { EditProposal, FamilyMember } from '../types';
+import { computeRelationshipLabel as computeGraphLabel } from '../services/relationshipGraph';
 
 const router = Router();
 
@@ -97,15 +98,16 @@ router.get('/persons/:id/relationships',
       [personId]
     );
 
-    // Compute display labels
-    const labeled = relationships.map((r) => {
+    // Compute display labels using graph traversal
+    const labeled = await Promise.all(relationships.map(async (r) => {
       const isFrom = r.from_person_id === personId;
-      const label = computeRelationshipLabel(r.type, r.subtype, isFrom, mode);
+      const relatedId = isFrom ? r.to_person_id : r.from_person_id;
+      const label = await computeGraphLabel(personId, relatedId, mode);
       const relatedPerson = isFrom
         ? { id: r.to_person_id, first_name: r.to_first_name, last_name: r.to_last_name }
         : { id: r.from_person_id, first_name: r.from_first_name, last_name: r.from_last_name };
       return { ...r, label, related_person: relatedPerson, direction: isFrom ? 'outgoing' : 'incoming' };
-    });
+    }));
 
     res.json({ relationships: labeled, mode });
   }
