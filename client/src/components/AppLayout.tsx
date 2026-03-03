@@ -20,6 +20,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <Link to="/dashboard" className="text-xl font-bold text-brand-700">🌳 Family Tree</Link>
             <div className="flex items-center gap-4">
               <NotificationBell />
+              {user?.role === 'superadmin' && (
+                <Link to="/superadmin" className="text-xs font-semibold px-2 py-1 bg-red-100 text-red-700 rounded">
+                  Admin
+                </Link>
+              )}
               <span className="text-sm text-gray-600">{user?.email}</span>
               <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-red-600 transition-colors">
                 Logout

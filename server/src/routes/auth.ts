@@ -242,4 +242,11 @@ router.post(
   }
 );
 
+// GET /api/auth/me
+router.get('/me', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+  const user = await queryOne<User>('SELECT id, email, role, verified FROM users WHERE id = $1 AND deleted_at IS NULL', [req.user!.id]);
+  if (!user) { sendError(res, 404, 'User not found'); return; }
+  res.json({ user: { id: user.id, email: user.email, role: user.role } });
+});
+
 export default router;

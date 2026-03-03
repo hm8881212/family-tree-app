@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import PersonForm from '../components/PersonForm';
 import FamilyTree, { TreePerson, TreeRelationship } from '../components/Tree/FamilyTree';
+import AddRelationshipForm from '../components/AddRelationshipForm';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -34,6 +35,7 @@ export default function FamilyPage() {
   const [relationships, setRelationships] = useState<TreeRelationship[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<TreePerson | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showRelForm, setShowRelForm] = useState(false);
   const [relMode, setRelMode] = useState<'indian' | 'international'>('international');
   const [loading, setLoading] = useState(true);
 
@@ -123,17 +125,34 @@ export default function FamilyPage() {
         </div>
       </div>
 
-      {/* Selected person details */}
+      {/* Selected person details + actions */}
       {selectedPerson && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-800">
               {selectedPerson.is_unknown ? 'Unknown Person' : `${selectedPerson.first_name} ${selectedPerson.last_name}`}
             </h3>
-            <button onClick={() => setSelectedPerson(null)} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+            <button onClick={() => { setSelectedPerson(null); setShowRelForm(false); }} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
           </div>
-          {selectedPerson.dob && <p className="text-sm text-gray-500">Born: {new Date(selectedPerson.dob).toLocaleDateString()}</p>}
-          {selectedPerson.dod && <p className="text-sm text-gray-500">Died: {new Date(selectedPerson.dod).toLocaleDateString()}</p>}
+          {selectedPerson.dob && <p className="text-sm text-gray-500 mb-1">Born: {new Date(selectedPerson.dob).toLocaleDateString()}</p>}
+          {selectedPerson.dod && <p className="text-sm text-gray-500 mb-1">Died: {new Date(selectedPerson.dod).toLocaleDateString()}</p>}
+          {!showRelForm ? (
+            <button onClick={() => setShowRelForm(true)}
+              className="mt-3 px-3 py-1.5 border border-brand-500 text-brand-600 text-sm rounded-lg hover:bg-brand-50">
+              + Add Relationship
+            </button>
+          ) : (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Add Relationship from this person</h4>
+              <AddRelationshipForm
+                familyId={id!}
+                fromPerson={selectedPerson}
+                allPersons={persons}
+                onSuccess={() => { setShowRelForm(false); loadData(); }}
+                onCancel={() => setShowRelForm(false)}
+              />
+            </div>
+          )}
         </div>
       )}
 

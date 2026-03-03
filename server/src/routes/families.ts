@@ -10,6 +10,25 @@ import { Family, FamilyMember, Invitation, User } from '../types';
 
 const router = Router();
 
+// GET /api/families/mine
+router.get('/mine',
+  authenticateToken,
+  requireVerified,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.user!.id;
+    const families = await query(
+      `SELECT f.id, f.name, f.slug, f.created_at, fm.role,
+        (SELECT COUNT(*) FROM family_members m WHERE m.family_id = f.id AND m.status = 'active') AS member_count
+       FROM families f
+       JOIN family_members fm ON fm.family_id = f.id
+       WHERE fm.user_id = $1 AND fm.status = 'active' AND f.deleted_at IS NULL
+       ORDER BY f.name`,
+      [userId]
+    );
+    res.json({ families });
+  }
+);
+
 // GET /api/families/search?q=
 router.get('/search',
   authenticateToken,

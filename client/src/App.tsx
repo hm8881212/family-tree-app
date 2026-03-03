@@ -9,6 +9,7 @@ import DashboardPage from './pages/DashboardPage';
 import NewFamilyPage from './pages/NewFamilyPage';
 import FamilyPage from './pages/FamilyPage';
 import FamilyAdminPage from './pages/FamilyAdminPage';
+import SuperAdminPage from './pages/SuperAdminPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/families/new" element={<NewFamilyPage />} />
             <Route path="/families/:id" element={<FamilyPage />} />
             <Route path="/families/:id/admin" element={<FamilyAdminPage />} />
+            <Route path="/superadmin" element={<SuperAdminPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
