@@ -10,6 +10,7 @@ import familiesRouter from './routes/families';
 import personsRouter from './routes/persons';
 import proposalsRouter from './routes/proposals';
 import relationshipsRouter from './routes/relationships';
+import notificationsRouter from './routes/notifications';
 import { generalRateLimiter } from './middleware/rateLimiter';
 import { sendError } from './utils/helpers';
 
@@ -32,6 +33,7 @@ app.use('/api/families/:id/persons', personsRouter);
 app.use('/api/families/:id', personsRouter); // for /proposals sub-route
 app.use('/api/proposals', proposalsRouter);
 app.use('/api', relationshipsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Invite validation (standalone)
 app.use('/api/invites', familiesRouter);
