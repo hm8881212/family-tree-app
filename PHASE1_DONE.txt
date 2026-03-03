@@ -1,0 +1,14 @@
+Phase 1 Complete — 2026-03-02
+
+What's done:
+- All DB migrations (001-009): users, invitations, families, persons, relationships, proposals, merges, audit, notifications
+- Full auth system: register (invite-gated), email verify, login (httpOnly JWT cookies), logout, refresh token rotation, forgot/reset password
+- Invitation system: admin sends invite, signed token, single-use, tied to family
+- Family CRUD: create, search, join requests, admin approve/reject
+- Persons: view (membership-gated), propose add (goes to admin approval)
+- Server fully wired: CORS, cookie-parser, rate limiting, all routes mounted
+- Client: React + Vite + Tailwind, axios API wrapper with auto-refresh on 401, all auth pages wired
+- TypeScript: zero errors
+- .env.example and README.md added
+
+Next: Phase 2 — Tree visualization, relationship management, Indian/International toggle
