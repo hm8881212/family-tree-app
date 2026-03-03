@@ -1,14 +1,12 @@
-Phase 1 Complete — 2026-03-02
+ALL PHASES COMPLETE — 2026-03-02
 
-What's done:
-- All DB migrations (001-009): users, invitations, families, persons, relationships, proposals, merges, audit, notifications
-- Full auth system: register (invite-gated), email verify, login (httpOnly JWT cookies), logout, refresh token rotation, forgot/reset password
-- Invitation system: admin sends invite, signed token, single-use, tied to family
-- Family CRUD: create, search, join requests, admin approve/reject
-- Persons: view (membership-gated), propose add (goes to admin approval)
-- Server fully wired: CORS, cookie-parser, rate limiting, all routes mounted
-- Client: React + Vite + Tailwind, axios API wrapper with auto-refresh on 401, all auth pages wired
-- TypeScript: zero errors
-- .env.example and README.md added
+Phase 1: Auth (register/invite, email verify, login httpOnly JWT, logout, refresh rotation, forgot/reset), Invitation system, Family CRUD + join requests, Persons (propose-add), zero TS errors
+Phase 2: Canvas-based tree visualization (pan/zoom/click), Relationships API (propose, approve, traverse), Indian/International label toggle, GET /families/:id/tree endpoint
+Phase 3: Notifications API (list, mark-read, mark-all-read), Audit log fully wired, Admin panel with proposals + join request management
+Phase 4: Super admin dashboard (families overview, audit log, promote users, soft-delete families), Tree merging (merge requests + dual-admin approval flow)
+Phase 5: .gitignore added, node_modules removed from git, clean repo
 
-Next: Phase 2 — Tree visualization, relationship management, Indian/International toggle
+To run:
+1. cd server && npm install && npm run db:migrate && npm run dev
+2. cd client && npm install && npm run dev
+3. Visit http://localhost:5173
