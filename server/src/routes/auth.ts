@@ -249,4 +249,36 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response): Pr
   res.json({ user: { id: user.id, email: user.email, role: user.role } });
 });
 
+// POST /api/auth/bootstrap — create first super admin (only works when no users exist)
+router.post(
+  '/bootstrap',
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  ],
+  async (req: Request, res: Response): Promise<void> => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) { sendValidationError(res, errors.array()); return; }
+
+    const { count } = (await queryOne<{ count: string }>('SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL'))!;
+    if (parseInt(count) > 0) {
+      sendError(res, 403, 'Bootstrap only available when no users exist');
+      return;
+    }
+
+    const { email, password } = req.body as { email: string; password: string };
+    const hashed = await hashPassword(password);
+    const user = await queryOne<User>(
+      `INSERT INTO users (email, password_hash, role, verified) VALUES ($1, $2, 'super_admin', true) RETURNING id, email, role`,
+      [email, hashed]
+    );
+
+    const accessToken = signAccessToken({ id: user!.id, email: user!.email, role: user!.role });
+    const refreshToken = signRefreshToken({ id: user!.id });
+    res.cookie(ACCESS_COOKIE, accessToken, COOKIE_OPTIONS);
+    res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTIONS);
+    res.json({ user: { id: user!.id, email: user!.email, role: user!.role } });
+  }
+);
+
 export default router;

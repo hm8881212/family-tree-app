@@ -225,6 +225,37 @@ router.post('/:id/reject-join/:userId',
   }
 );
 
+// GET /api/families/:id/tree
+router.get('/:id/tree',
+  authenticateToken,
+  requireVerified,
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { id: familyId } = req.params;
+      const family = await queryOne<Family>('SELECT id FROM families WHERE id = $1 AND deleted_at IS NULL', [familyId]);
+      if (!family) { sendError(res, 404, 'Family not found'); return; }
+
+      const persons = await query(
+        `SELECT p.id, p.first_name, p.last_name, p.gender, p.dob, p.photo_url, p.is_unknown
+         FROM persons p
+         JOIN person_families pf ON pf.person_id = p.id
+         WHERE pf.family_id = $1 AND p.deleted_at IS NULL
+         ORDER BY p.created_at`,
+        [familyId]
+      );
+      const relationships = await query(
+        `SELECT id, from_person_id, to_person_id, type, subtype, status
+         FROM relationships WHERE family_id = $1`,
+        [familyId]
+      );
+      res.json({ persons, relationships });
+    } catch (e) {
+      console.error('Tree error:', e);
+      sendError(res, 500, 'Failed to load tree');
+    }
+  }
+);
+
 // GET /api/families/:id
 router.get('/:id',
   authenticateToken,

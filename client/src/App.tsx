@@ -11,6 +11,7 @@ import FamilyPage from './pages/FamilyPage';
 import FamilyAdminPage from './pages/FamilyAdminPage';
 import SuperAdminPage from './pages/SuperAdminPage';
 import PersonPage from './pages/PersonPage';
+import BootstrapPage from './pages/BootstrapPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/setup" element={<BootstrapPage />} />
           <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />

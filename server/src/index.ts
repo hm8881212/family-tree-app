@@ -5,6 +5,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Prevent unhandled rejections from crashing the server
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:', err);
+});
+
 import authRouter from './routes/auth';
 import familiesRouter from './routes/families';
 import personsRouter from './routes/persons';
