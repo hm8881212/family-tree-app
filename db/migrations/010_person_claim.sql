@@ -1,4 +1,4 @@
--- Allow linking an unknown person node to a registered user
+﻿-- Allow linking an unknown person node to a registered user
 ALTER TABLE persons
   ADD COLUMN IF NOT EXISTS claimed_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
 
