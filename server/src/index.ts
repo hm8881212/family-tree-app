@@ -1,4 +1,5 @@
-﻿import express from 'express';
+﻿import 'express-async-errors';
+import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
@@ -40,7 +41,9 @@ app.use('/api/families/:id/persons', personsRouter);
 app.use('/api/families/:id', personsRouter); // for /proposals sub-route
 app.use('/api/persons', personsRouter);      // standalone /api/persons/:id routes
 app.use('/api/proposals', proposalsRouter);
-app.use('/api', relationshipsRouter);
+app.use('/api/relationships', relationshipsRouter);
+app.use('/api/proposals', relationshipsRouter);
+app.use('/api/persons', relationshipsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/superadmin', superadminRouter);
 app.use('/api/uploads', uploadsRouter);
