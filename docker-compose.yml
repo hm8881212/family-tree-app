@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: family-tree-db
+    environment:
+      POSTGRES_USER: familytree
+      POSTGRES_PASSWORD: familytree
+      POSTGRES_DB: family_tree
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U familytree -d family_tree"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: .
+      target: server-build
+    container_name: family-tree-server
+    working_dir: /app/server
+    command: sh -c "npm run db:migrate && npm run dev"
+    env_file:
+      - .env.local
+    environment:
+      DATABASE_URL: postgresql://familytree:familytree@db:5432/family_tree
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./server:/app/server
+      - ./db:/app/db
+      - /app/server/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    build:
+      context: .
+      target: client-build
+    container_name: family-tree-client
+    working_dir: /app/client
+    command: npm run dev -- --host
+    environment:
+      VITE_API_URL: http://localhost:4000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app/client
+      - /app/client/node_modules
+    depends_on:
+      - server
+
+volumes:
+  pgdata:
