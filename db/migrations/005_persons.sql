@@ -1,4 +1,4 @@
-﻿-- Persons table (no direct family_id, uses person_families)
+-- Persons table (no direct family_id, uses person_families)
 CREATE TABLE persons (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   first_name TEXT NOT NULL,

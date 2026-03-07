@@ -1,4 +1,4 @@
-﻿-- Merge Requests
+-- Merge Requests
 CREATE TABLE merge_requests (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   family_a_id UUID NOT NULL REFERENCES families(id),

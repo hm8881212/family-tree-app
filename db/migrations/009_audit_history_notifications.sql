@@ -1,4 +1,4 @@
-﻿-- Audit Log
+-- Audit Log
 CREATE TABLE audit_log (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   entity_type TEXT NOT NULL,

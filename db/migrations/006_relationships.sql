@@ -1,4 +1,4 @@
-﻿-- Relationships (canonical direction only)
+-- Relationships (canonical direction only)
 CREATE TABLE relationships (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   from_person_id UUID NOT NULL REFERENCES persons(id),

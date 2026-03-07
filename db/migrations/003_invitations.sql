@@ -1,4 +1,4 @@
-﻿-- Invitations table
+-- Invitations table
 CREATE TABLE invitations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT NOT NULL,
