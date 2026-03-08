@@ -6,3 +6,11 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+
+client/.vite/
+test-*.mjs
+seed-admin.mjs
+verify-hash.mjs
+server/test-*.mjs
+server/seed-admin.mjs
+server/verify-hash.mjs
